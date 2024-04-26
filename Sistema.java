@@ -18,6 +18,7 @@ public class Sistema {
 	// -------------------------------------------------------------------------------------------------------
 	// --------------------- M E M O R I A - definicoes de palavra de memoria,
 	// memória ----------------------
+	private GM memoryManager;
 
 	public class Memory {
 		public int tamMem;
@@ -760,6 +761,56 @@ public class Sistema {
 			for (int i = 0; i < nroFrames; i++) {
                 frames[i] = true;
             }
+		}
+	}
+
+	public class PCB {
+		int id;
+		int pc;
+		int partition;
+		// Adicione outros atributos conforme necessário
+
+		public PCB(int id, int partition) {
+			this.id = id;
+			this.pc = 0;
+			this.partition = partition;
+			// Inicialize outros atributos conforme necessário
+		}
+	}
+
+	public class ProcessManager {
+		private GM memoryManager;
+		private Queue<PCB> readyQueue;
+		private PCB runningProcess;
+
+		public ProcessManager(GM memoryManager) {
+			this.memoryManager = memoryManager;
+			this.readyQueue = new LinkedList<>();
+			this.runningProcess = null;
+		}
+
+		public boolean criaProcesso(Word[] programa) {
+			if (!memoryManager.aloca(programa.length, new int[]{0, programa.length - 1})) {
+				return false;
+			}
+
+			PCB pcb = new PCB(runningProcess.id, runningProcess.partition);
+			// Carrega o programa
+			// Seta demais parâmetros do PCB
+
+			readyQueue.add(pcb);
+			return true;
+		}
+
+		public void desalocaProcesso(int id) {
+			memoryManager.desaloca(new int[]{0, runningProcess.partition});
+
+			// Remova o PCB da fila de prontos ou do processo em execução
+			if (runningProcess != null && runningProcess.id == id) {
+				runningProcess = null;
+			} else {
+				readyQueue.removeIf(pcb -> pcb.id == id);
+			}
 		}
 	}
 
