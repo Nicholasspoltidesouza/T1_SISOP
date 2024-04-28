@@ -22,20 +22,9 @@ public class Sistema {
 	public class Memory {
 		public int tamMem;
 		public Word[] m; // m representa a memória fisica: um array de posicoes de memoria (word)
-		public int tamPag;
-		public int nroFrames;
-		public boolean[] frames;
 
-		public Memory(int size, int tamPag) {
+		public Memory(int size) {
 			tamMem = size;
-			this.tamPag = tamPag;
-
-			nroFrames = tamMem / tamPag;
-			frames = new boolean[nroFrames];
-
-			for (int i = 0; i < nroFrames; i++) {
-				frames[i] = true;
-			}
 
 			m = new Word[tamMem];
 
@@ -59,9 +48,12 @@ public class Sistema {
 
 		public void dump(int ini, int fim) {
 			for (int i = ini; i < fim; i++) {
-				System.out.print(i);
-				System.out.print(":  ");
-				dump(m[i]);
+				if(m[i].opc!=Opcode.___){
+					System.out.print(i);
+					System.out.print(":  ");
+					dump(m[i]);
+				}
+
 			}
 		}
 	}
@@ -394,9 +386,9 @@ public class Sistema {
 			// cria memória
 			tamMem = 1024;
 			tamPag = 8;
-			mem = new Memory(tamMem, tamPag);
+			mem = new Memory(tamMem);
 			m = mem.m; // RETORNAR A PAGINA LIVRE PRA ALOCAR O PROGRAMA
-			gm = new GM(mem);
+			gm = new GM(mem, tamMem, tamPag);
 
 			// cria cpu
 			cpu = new CPU(mem, ih, sysCall, true); // true liga debug
@@ -425,6 +417,7 @@ public class Sistema {
 		public void handle(Interrupts irpt, int pc) { // apenas avisa - todas interrupcoes neste momento finalizam o
 														// programa
 			System.out.println("                                               Interrupcao " + irpt + "   pc: " + pc);
+
 		}
 	}
 
@@ -477,7 +470,7 @@ public class Sistema {
 	private void loadAndExec(Word[] p, int process_id) {
 		System.out.println(" ");
 		System.out.println("Tamanho do Processo: " + p.length);
-		boolean podeAlocar = vm.gm.aloca(p.length, process_id);
+		boolean podeAlocar = vm.gm.aloca(p.length);
 		System.out.println("Consegue alocar? " + podeAlocar);
 		System.out.println("");
 		int[] tabelaPaginas = vm.gm.tabelaPaginas;
@@ -531,8 +524,9 @@ public class Sistema {
 	// ------------------- instancia e testa sistema
 	public static void main(String args[]) {
 		Sistema s = new Sistema();
-		// s.loadAndExec(progs.fibonacci10);
+		// s.loadAndExec(progs.fibonacci10, 2);
 		// s.loadAndExec(progs.progMinimo);
+		
 		s.loadAndExec(progs.fatorial, 1);
 		// s.loadAndExec(progs.fatorialTRAP); // saida
 		// s.loadAndExec(progs.fibonacciTRAP); // entrada
@@ -772,19 +766,26 @@ public class Sistema {
 	public class GM {
 		public Memory memory;
 		public int tamPag;
-		public int tamMemoria;
+		public int tamMem;
 		public boolean[] frames;
 		public int[] tabelaPaginas;
 		public ArrayList<Integer> framesAlocados;
 		public int nroPaginas;
+		public int nroFrames;
 
 		// TABELA DE PÁGINAS
 
-		public GM(Memory memory) {
+		public GM(Memory memory, int tamMem, int tamPag) {
 			this.memory = memory;
-			this.tamMemoria = memory.tamMem;
-			this.tamPag = memory.tamPag;
-			this.frames = memory.frames;
+			this.tamMem = tamMem;
+			this.tamPag = tamPag;
+
+			nroFrames = tamMem / tamPag;
+			frames = new boolean[nroFrames];
+
+			for (int i = 0; i < nroFrames; i++) {
+				frames[i] = true;
+			}
 			this.tabelaPaginas = new int[frames.length];
 			this.framesAlocados = new ArrayList<Integer>();
 			inicializarTabelaPaginas();
@@ -796,7 +797,7 @@ public class Sistema {
 			}
 		}
 
-		public boolean aloca(int nroPalavras, int process_id) {
+		public boolean aloca(int nroPalavras) {
 			System.out.println("Tamanho de Pagina: " + tamPag);
 			this.nroPaginas = nroPalavras / tamPag;
 			int framesLivres = 0;
@@ -891,16 +892,65 @@ public class Sistema {
 	}
 
 	public class PCB {
+		private static int registro=0;
 		int id;
+		int particao;
+		String estado;
 		int pc;
-		int partition;
+		
 		// Adicione outros atributos conforme necessário
 
-		public PCB(int id, int partition) {
-			this.id = id;
-			this.pc = 0;
-			this.partition = partition;
-			// Inicialize outros atributos conforme necessário
+		public PCB(int particao, String estado, int pc) {
+			id=registro;
+			this.particao = particao;
+			this.estado = estado;
+			this.pc=pc;
+			registro++;
+		}
+
+		public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public String getEstado() {
+            return estado;
+        }
+
+        public void setEstado(String estado) {
+            this.estado = estado;
+        }
+
+        public int getParticao() {
+            return particao;
+        }
+
+        public void setParticao(int particao) {
+            this.particao = particao;
+        }
+
+	}
+
+	public class GP{
+		public ArrayList<PCB> processos = new ArrayList<>();
+		public GP(ArrayList<PCB> processos){
+			this.processos=processos;
+		}
+
+		public boolean criaProcesso(Word[] programa){		
+			if(vm.gm.aloca(programa.length)){
+				PCB proc = new PCB(1, "a", 0);
+				processos.add(proc);
+				return true;
+			}
+			return false;
+		}
+
+		public void desalocaProcesso(int id){
+
 		}
 	}
 
@@ -942,5 +992,6 @@ public class Sistema {
 	// }
 
 	// -------------------------------------------------------------------------------------------------------
+
 
 }
