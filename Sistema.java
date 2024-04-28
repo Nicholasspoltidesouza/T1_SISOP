@@ -48,12 +48,11 @@ public class Sistema {
 
 		public void dump(int ini, int fim) {
 			for (int i = ini; i < fim; i++) {
-				if(m[i].opc!=Opcode.___){
+				if (m[i].opc != Opcode.___) {
 					System.out.print(i);
 					System.out.print(":  ");
 					dump(m[i]);
 				}
-
 			}
 		}
 	}
@@ -467,7 +466,7 @@ public class Sistema {
 		loadProgram(p, vm.m);
 	}
 
-	private void loadAndExec(Word[] p, int process_id) {
+	private void loadAndExec(Word[] p) {
 		System.out.println(" ");
 		System.out.println("Tamanho do Processo: " + p.length);
 		boolean podeAlocar = vm.gm.aloca(p.length);
@@ -478,7 +477,7 @@ public class Sistema {
 		for (int i = 0; i < tabelaPaginas.length; i++) {
 			int pagina = tabelaPaginas[i];
 			if (pagina != -1) {
-				System.out.println("Processo: " + process_id + " Página: " + pagina + " Frame: " + i + " Início: "
+				System.out.println(" Página: " + pagina + " Frame: " + i + " Início: "
 						+ (i * vm.gm.tamPag)
 						+ " Fim: " + (((i * vm.gm.tamPag) - 1) + vm.gm.tamPag));
 			}
@@ -490,11 +489,12 @@ public class Sistema {
 		}
 
 		System.out.println("---------------------------------- programa carregado na memoria");
-		vm.mem.dump(0, 900); // dump da memoria nestas posicoes
+		vm.mem.dump(0, 50); // dump da memoria nestas posicoes
 		vm.cpu.setContext(0, vm.tamMem - 1, 0); // seta estado da cpu ]
 		System.out.println("---------------------------------- inicia execucao ");
 		vm.cpu.run(); // cpu roda programa ate parar
-		System.out.println("---------------------------------- memoria após execucao ");
+		int[] teste = { 1, 2 };
+		// vm.gm.desaloca(teste);
 		vm.mem.dump(0, p.length); // dump da memoria com resultado
 
 	}
@@ -525,10 +525,9 @@ public class Sistema {
 	public static void main(String args[]) {
 		Sistema s = new Sistema();
 		// s.loadAndExec(progs.fibonacci10, 2);
-		// s.loadAndExec(progs.progMinimo);
-		
-		s.loadAndExec(progs.fatorial, 1);
-		// s.loadAndExec(progs.fatorialTRAP); // saida
+		s.loadAndExec(progs.progMinimo);
+		s.loadAndExec(progs.fatorial);
+		s.loadAndExec(progs.fatorialTRAP); // saida
 		// s.loadAndExec(progs.fibonacciTRAP); // entrada
 		// s.loadAndExec(progs.PC); // bubble sort
 
@@ -787,7 +786,6 @@ public class Sistema {
 				frames[i] = true;
 			}
 			this.tabelaPaginas = new int[frames.length];
-			this.framesAlocados = new ArrayList<Integer>();
 			inicializarTabelaPaginas();
 		}
 
@@ -799,6 +797,7 @@ public class Sistema {
 
 		public boolean aloca(int nroPalavras) {
 			System.out.println("Tamanho de Pagina: " + tamPag);
+			this.framesAlocados = new ArrayList<Integer>();
 			this.nroPaginas = nroPalavras / tamPag;
 			int framesLivres = 0;
 
@@ -807,9 +806,6 @@ public class Sistema {
 			}
 
 			System.out.println("Número de Páginas: " + nroPaginas);
-
-			// frames[0] = false;
-			frames[1] = false;
 
 			for (int i = 0; i < frames.length; i++) {
 				if (frames[i] == true) {
@@ -845,29 +841,6 @@ public class Sistema {
 			}
 		}
 
-		public void carga(Word[] p) {
-			int enderecoLogico = 0;
-			for (int i = 0; i < p.length; i++) {
-				int enderecoFisico = tradutorEndereco(i);
-			}
-
-		}
-
-		public int tradutorEndereco(int posicaoLogica) {
-
-			ArrayList<Integer> framesAlocados = vm.gm.framesAlocados;
-
-			int emQPaginaEstou = posicaoLogica / tamPag;
-
-			int offset = posicaoLogica % tamPag;
-
-			int emQFrameEstou = framesAlocados.get(emQPaginaEstou).intValue();
-
-			int inicioFrame = emQFrameEstou * vm.gm.tamPag;
-
-			return inicioFrame + offset;
-		}
-
 		// public int carga(int enderecoLogico, Word[] programa){
 
 		// int enderecoFisico = traducao(enderecoLogico,0);
@@ -892,56 +865,33 @@ public class Sistema {
 	}
 
 	public class PCB {
-		private static int registro=0;
+		private static int registro = 0;
 		int id;
 		int particao;
 		String estado;
 		int pc;
-		
+
 		// Adicione outros atributos conforme necessário
 
 		public PCB(int particao, String estado, int pc) {
-			id=registro;
+			id = registro;
 			this.particao = particao;
 			this.estado = estado;
-			this.pc=pc;
+			this.pc = pc;
 			registro++;
 		}
 
-		public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public String getEstado() {
-            return estado;
-        }
-
-        public void setEstado(String estado) {
-            this.estado = estado;
-        }
-
-        public int getParticao() {
-            return particao;
-        }
-
-        public void setParticao(int particao) {
-            this.particao = particao;
-        }
-
 	}
 
-	public class GP{
+	public class GP {
 		public ArrayList<PCB> processos = new ArrayList<>();
-		public GP(ArrayList<PCB> processos){
-			this.processos=processos;
+
+		public GP(ArrayList<PCB> processos) {
+			this.processos = processos;
 		}
 
-		public boolean criaProcesso(Word[] programa){		
-			if(vm.gm.aloca(programa.length)){
+		public boolean criaProcesso(Word[] programa) {
+			if (vm.gm.aloca(programa.length)) {
 				PCB proc = new PCB(1, "a", 0);
 				processos.add(proc);
 				return true;
@@ -949,7 +899,7 @@ public class Sistema {
 			return false;
 		}
 
-		public void desalocaProcesso(int id){
+		public void desalocaProcesso(int id) {
 
 		}
 	}
@@ -992,6 +942,5 @@ public class Sistema {
 	// }
 
 	// -------------------------------------------------------------------------------------------------------
-
 
 }
