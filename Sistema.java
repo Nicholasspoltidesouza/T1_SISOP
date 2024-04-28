@@ -18,7 +18,6 @@ public class Sistema {
 	// -------------------------------------------------------------------------------------------------------
 	// --------------------- M E M O R I A - definicoes de palavra de memoria,
 	// memória ----------------------
-	private GM memoryManager;
 
 	public class Memory {
 		public int tamMem;
@@ -164,7 +163,7 @@ public class Sistema {
 				// --------------------------------------------------------------------------------------------------
 				// FETCH
 				if (legal(pc)) { // pc valido
-					ir = m[pc]; // <<<<<<<<<<<< busca posicao da memoria apontada por pc, guarda em ir
+					ir = m[tradutorEndereco(pc)]; // <<<<<<<<<<<< busca posicao da memoria apontada por pc, guarda em ir
 					if (debug) {
 						System.out.print("                               pc: " + pc + "       exec: ");
 						mem.dump(ir);
@@ -449,58 +448,62 @@ public class Sistema {
 	// ------------------ load é invocado a partir de requisição do usuário
 	private void loadProgram(Word[] p, Word[] m) {
 		for (int i = 0; i < p.length; i++) {
-			m[i].opc = p[i].opc;
-			m[i].r1 = p[i].r1;
-			m[i].r2 = p[i].r2;
-			m[i].p = p[i].p;
+			m[tradutorEndereco(i)].opc = p[i].opc;
+			m[tradutorEndereco(i)].r1 = p[i].r1;
+			m[tradutorEndereco(i)].r2 = p[i].r2;
+			m[tradutorEndereco(i)].p = p[i].p;
 		}
 	}
 
-	private void loadProgram(Word[] p) {
+	public int tradutorEndereco(int posicaoLogica) {
+
+		ArrayList<Integer> framesAlocados = vm.gm.framesAlocados;
+
+		int emQPaginaEstou = posicaoLogica / vm.tamPag;
+
+		int offset = posicaoLogica % vm.tamPag;
+
+		int emQFrameEstou = framesAlocados.get(emQPaginaEstou).intValue();
+
+		int inicioFrame = emQFrameEstou * vm.gm.tamPag;
+
+		return inicioFrame + offset;
+	}
+
+	private void loadProgram(Word[] p, ArrayList framesAlocados) {
+		loadProgram(p, vm.m);
+	}
+
+	private void loadAndExec(Word[] p, int process_id) {
 		System.out.println(" ");
 		System.out.println("Tamanho do Processo: " + p.length);
-		boolean podeAlocar = vm.gm.aloca(p.length);
+		boolean podeAlocar = vm.gm.aloca(p.length, process_id);
 		System.out.println("Consegue alocar? " + podeAlocar);
 		System.out.println("");
-
-		int[][] framesTam = new int[vm.gm.frames.length][vm.gm.tamPag];
-
 		int[] tabelaPaginas = vm.gm.tabelaPaginas;
 		System.out.println("-------------Tabela de Páginas--------------");
 		for (int i = 0; i < tabelaPaginas.length; i++) {
 			int pagina = tabelaPaginas[i];
 			if (pagina != -1) {
-				System.out.println("Página: " + pagina + " Frame: " + i + " Início: " + (i * vm.gm.tamPag)
+				System.out.println("Processo: " + process_id + " Página: " + pagina + " Frame: " + i + " Início: "
+						+ (i * vm.gm.tamPag)
 						+ " Fim: " + (((i * vm.gm.tamPag) - 1) + vm.gm.tamPag));
 			}
 		}
 		System.out.println("--------------------------------------------");
 
-		System.out.println(vm.gm.nroPaginas);
+		if (podeAlocar) {
+			loadProgram(p, vm.gm.framesAlocados); // carga do programa na memoria
+		}
 
-		// if (podeAlocar) {
-		// for (int k = 0; k < vm.gm.nroPaginas; k++) {
-		// Word[] parte = new Word[vm.gm.tamPag];
-		// for (int h = 0; h < vm.gm.tamPag; h++) {
-		// if (p[h] != null) {
-		// parte[h] = p[h];
-		// }
-		// }
-		// Word[] frame = new Word[vm.gm.tamPag];
-		// loadProgram(p, frame);
-		// }
-		// }
-	}
-
-	private void loadAndExec(Word[] p) {
-		loadProgram(p); // carga do programa na memoria
 		System.out.println("---------------------------------- programa carregado na memoria");
-		vm.mem.dump(0, p.length); // dump da memoria nestas posicoes
+		vm.mem.dump(0, 900); // dump da memoria nestas posicoes
 		vm.cpu.setContext(0, vm.tamMem - 1, 0); // seta estado da cpu ]
 		System.out.println("---------------------------------- inicia execucao ");
 		vm.cpu.run(); // cpu roda programa ate parar
 		System.out.println("---------------------------------- memoria após execucao ");
 		vm.mem.dump(0, p.length); // dump da memoria com resultado
+
 	}
 
 	// -------------------------------------------------------------------------------------------------------
@@ -530,7 +533,7 @@ public class Sistema {
 		Sistema s = new Sistema();
 		// s.loadAndExec(progs.fibonacci10);
 		// s.loadAndExec(progs.progMinimo);
-		s.loadAndExec(progs.fatorial);
+		s.loadAndExec(progs.fatorial, 1);
 		// s.loadAndExec(progs.fatorialTRAP); // saida
 		// s.loadAndExec(progs.fibonacciTRAP); // entrada
 		// s.loadAndExec(progs.PC); // bubble sort
@@ -783,7 +786,7 @@ public class Sistema {
 			this.tamPag = memory.tamPag;
 			this.frames = memory.frames;
 			this.tabelaPaginas = new int[frames.length];
-			this.framesAlocados = new ArrayList<>();
+			this.framesAlocados = new ArrayList<Integer>();
 			inicializarTabelaPaginas();
 		}
 
@@ -793,7 +796,7 @@ public class Sistema {
 			}
 		}
 
-		public boolean aloca(int nroPalavras) {
+		public boolean aloca(int nroPalavras, int process_id) {
 			System.out.println("Tamanho de Pagina: " + tamPag);
 			this.nroPaginas = nroPalavras / tamPag;
 			int framesLivres = 0;
@@ -805,7 +808,7 @@ public class Sistema {
 			System.out.println("Número de Páginas: " + nroPaginas);
 
 			// frames[0] = false;
-			// frames[1] = false;
+			frames[1] = false;
 
 			for (int i = 0; i < frames.length; i++) {
 				if (frames[i] == true) {
@@ -840,6 +843,51 @@ public class Sistema {
 				}
 			}
 		}
+
+		public void carga(Word[] p) {
+			int enderecoLogico = 0;
+			for (int i = 0; i < p.length; i++) {
+				int enderecoFisico = tradutorEndereco(i);
+			}
+
+		}
+
+		public int tradutorEndereco(int posicaoLogica) {
+
+			ArrayList<Integer> framesAlocados = vm.gm.framesAlocados;
+
+			int emQPaginaEstou = posicaoLogica / tamPag;
+
+			int offset = posicaoLogica % tamPag;
+
+			int emQFrameEstou = framesAlocados.get(emQPaginaEstou).intValue();
+
+			int inicioFrame = emQFrameEstou * vm.gm.tamPag;
+
+			return inicioFrame + offset;
+		}
+
+		// public int carga(int enderecoLogico, Word[] programa){
+
+		// int enderecoFisico = traducao(enderecoLogico,0);
+		// var enderecoFisicoFinal = enderecoFisico + tamPart;
+		// var posicPrograma = 0;
+		// for (int i = enderecoFisico; i<enderecoFisicoFinal-1; i++){
+		// if(posicPrograma<programa.length-1){
+		// memory.m[i] = programa[posicPrograma];
+		// }else{
+		// memory.m[i] = new Word(Opcode.___, -1,-1,-1);
+		// }
+
+		// posicPrograma++;
+		// }
+		// return enderecoLogico;
+		// }
+
+		// public int traducao(int enderecoLogico,int offset){
+		// // System.out.println(enderecoLogico*tamPart+offset);
+		// return enderecoLogico*tamPart+offset;
+		// }
 	}
 
 	public class PCB {
