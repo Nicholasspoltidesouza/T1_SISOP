@@ -25,6 +25,7 @@ public class Sistema {
 		public Word[] m; // m representa a memória fisica: um array de posicoes de memoria (word)
 		public int tamPag;
 		public int nroFrames;
+		public boolean[] page; 
 		public boolean[] frames = new boolean[nroFrames];
 
 		public Memory(int size, int tamPag) {
@@ -35,6 +36,9 @@ public class Sistema {
 			for (int i = 0; i < nroFrames; i++) {
 				frames[i] = true;
 			}
+		
+
+			
 
 			m = new Word[tamMem];
 
@@ -380,7 +384,6 @@ public class Sistema {
 	// -----------------------------------------------
 	public class VM {
 		public int tamMem;
-		public int tamPag;
 		public Word[] m;
 		public Memory mem;
 		public CPU cpu;
@@ -392,9 +395,8 @@ public class Sistema {
 			// chamadas de sistema
 			// cria memória
 			tamMem = 1024;
-			tamPag = 8;
-			mem = new Memory(tamMem, tamPag);
-			m = mem.m; // RETORNAR A PAGINA LIVRE PRA ALOCAR O PROGRAMA
+			mem = new Memory(tamMem);
+			m = mem.m;
 			// cria cpu
 			cpu = new CPU(mem, ih, sysCall, true); // true liga debug
 		}
@@ -732,72 +734,52 @@ public class Sistema {
 	}
 
 	public class GM {
-		public Memory memory;
+		public int tamMem;
+		public int tamPag;
+		public int tamFrame;
+		public int nroFrames;
 
-		// TABELA DE PÁGINAS
-
-		public GM(Memory memory) {
-			this.memory = memory;
+		public GM(int tamPag, int tamMem) {
+			this.tamPag = tamPag;
+			this.tamMem = tamMem;
+			tamFrame = tamPag;
+			nroFrames = tamMem / tamPag;
 		}
 
-		public boolean aloca(int nroPalavras) {
-			boolean[] frames = memory.frames;
-			int nroPaginas = nroPalavras / 8;
-			int framesLivres = 0;
-			ArrayList<Integer> framesAlocados = new ArrayList<>();
+		public boolean[] frames = new boolean[nroFrames];
 
-			if (nroPalavras % 8 > 0) {
-				nroPaginas++;
+		public void encherMemoria() {
+			for (int i = 0; i < nroFrames; i++) {
+				frames[i] = true;
+			}
+		}
+
+		public boolean aloca(int nroPalavras, int[] tabelaPagina) {
+
+			int framesOcupados = nroPalavras / tamFrame;
+
+			if (nroPalavras % tamFrame > 0) {
+				framesOcupados++;
 			}
 
-			for (int i = 0; i < frames.length; i++) {
-				if (frames[i] == true) {
-					framesLivres++;
-				}
-			}
-
-			if (framesLivres >= nroPaginas) {
-				for (int j = 0; j < nroPaginas; j++) {
-					for (int i = 0; i < frames.length; i++) {
-						if (frames[i] == true) {
-							framesAlocados.add(i);
-							frames[i] = false;
-							break;
-						}
+			int cont = 0;
+			for (int i = 0; i < nroFrames; i++) {
+				if (frames[i] = true) {
+					cont++;
+					frames[i] = false;
+					if (cont == framesOcupados) {
+						return true;
 					}
 				}
-				return true;
 			}
-
 			return false;
 		}
 
-		// public boolean aloca(int nroPalavras, int[] tabelaPagina) {
-
-		// int framesOcupados = nroPalavras / tamFrame;
-
-		// if (nroPalavras % tamFrame > 0) {
-		// framesOcupados++;
-		// }
-
-		// int cont = 0;
-		// for (int i = 0; i < nroFrames; i++) {
-		// if (frames[i] = true) {
-		// cont++;
-		// frames[i] = false;
-		// if (cont == framesOcupados) {
-		// return true;
-		// }
-		// }
-		// }
-		// return false;
-		// }
-
-		// public void desaloca(int[] tabelaPagina) {
-		// for (int i = 0; i < nroFrames; i++) {
-		// frames[i] = true;
-		// }
-		// }
+		public void desaloca(int[] tabelaPagina) {
+			for (int i = 0; i < nroFrames; i++) {
+				frames[i] = true;
+			}
+		}
 	}
 
 	public class PCB {
@@ -814,42 +796,41 @@ public class Sistema {
 		}
 	}
 
-	// public class ProcessManager {
-	// private GM memoryManager;
-	// private Queue<PCB> readyQueue;
-	// private PCB runningProcess;
+	public class ProcessManager {
+		private GM memoryManager;
+		private Queue<PCB> readyQueue;
+		private PCB runningProcess;
 
-	// public ProcessManager(GM memoryManager) {
-	// this.memoryManager = memoryManager;
-	// this.readyQueue = new LinkedList<>();
-	// this.runningProcess = null;
-	// }
+		public ProcessManager(GM memoryManager) {
+			this.memoryManager = memoryManager;
+			this.readyQueue = new LinkedList<>();
+			this.runningProcess = null;
+		}
 
-	// public boolean criaProcesso(Word[] programa) {
-	// if (!memoryManager.aloca(programa.length, new int[] { 0, programa.length - 1
-	// })) {
-	// return false;
-	// }
+		public boolean criaProcesso(Word[] programa) {
+			if (!memoryManager.aloca(programa.length, new int[] { 0, programa.length - 1 })) {
+				return false;
+			}
 
-	// PCB pcb = new PCB(runningProcess.id, runningProcess.partition);
-	// // Carrega o programa
-	// // Seta demais parâmetros do PCB
+			PCB pcb = new PCB(runningProcess.id, runningProcess.partition);
+			// Carrega o programa
+			// Seta demais parâmetros do PCB
 
-	// readyQueue.add(pcb);
-	// return true;
-	// }
+			readyQueue.add(pcb);
+			return true;
+		}
 
-	// public void desalocaProcesso(int id) {
-	// memoryManager.desaloca(new int[] { 0, runningProcess.partition });
+		public void desalocaProcesso(int id) {
+			memoryManager.desaloca(new int[] { 0, runningProcess.partition });
 
-	// // Remova o PCB da fila de prontos ou do processo em execução
-	// if (runningProcess != null && runningProcess.id == id) {
-	// runningProcess = null;
-	// } else {
-	// readyQueue.removeIf(pcb -> pcb.id == id);
-	// }
-	// }
-	// }
+			// Remova o PCB da fila de prontos ou do processo em execução
+			if (runningProcess != null && runningProcess.id == id) {
+				runningProcess = null;
+			} else {
+				readyQueue.removeIf(pcb -> pcb.id == id);
+			}
+		}
+	}
 
 	// -------------------------------------------------------------------------------------------------------
 
