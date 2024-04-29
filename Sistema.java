@@ -127,9 +127,22 @@ public class Sistema {
 			debug = _debug; // se true, print da instrucao em execucao
 		}
 
-		private boolean legal(int e) { // todo acesso a memoria tem que ser verificado
-			// ????
-			return true;
+		private boolean legal(int e, ArrayList<Integer> framesAlocados) { // todo acesso a memoria tem que ser
+																			// verificado
+			for (int i = 0; i < framesAlocados.size(); i++) {
+				int frame = framesAlocados.get(i);
+				int tamMaximo = (frame * vm.gm.tamPag) + vm.gm.tamPag - 1;
+				int tamMinimo = frame * vm.gm.tamPag;
+				// System.out.println("Frame" + frame);
+				// System.out.println("tamMaximo" + tamMaximo);
+				// System.out.println(e);
+				// System.out.println("tamMin" + tamMinimo);
+				if (e <= tamMaximo && e >= tamMinimo) {
+					return true;
+				}
+			}
+			irpt = Interrupts.intEnderecoInvalido;
+			return false;
 		}
 
 		private boolean testOverflow(int v) { // toda operacao matematica deve avaliar se ocorre overflow
@@ -148,14 +161,18 @@ public class Sistema {
 			irpt = Interrupts.noInterrupt; // reset da interrupcao registrada
 		}
 
-		public void run() { // execucao da CPU supoe que o contexto da CPU, vide acima, esta devidamente
-							// setado
+		public void run(ArrayList<Integer> framesAlocados) { // execucao da CPU supoe que o contexto da CPU, vide acima,
+																// esta devidamente
+			// setado
 			while (true) { // ciclo de instrucoes. acaba cfe instrucao, veja cada caso.
 				// --------------------------------------------------------------------------------------------------
 				// FETCH
-				if (legal(pc)) { // pc valido
-					ir = m[tradutorEnderecoCriar(pc)]; // <<<<<<<<<<<< busca posicao da memoria apontada por pc, guarda
-														// em ir
+				if (legal(pc, framesAlocados)) { // pc valido
+					ir = m[tradutorEndereco(pc, framesAlocados)]; // <<<<<<<<<<<< busca posicao da memoria
+																	// apontada
+					// por pc,
+					// guarda
+					// em ir
 					if (debug) {
 						System.out.print("                               pc: " + pc + "       exec: ");
 						mem.dump(ir);
@@ -171,35 +188,33 @@ public class Sistema {
 							break;
 
 						case LDD: // Rd <- [A]
-							if (legal(ir.p)) {
+							if (legal(ir.p, framesAlocados)) {
 								reg[ir.r1] = m[ir.p].p;
 								pc++;
 							}
 							break;
 
 						case LDX: // RD <- [RS] // NOVA
-							if (legal(reg[ir.r2])) {
+							if (legal(reg[ir.r2], framesAlocados)) {
 								reg[ir.r1] = m[reg[ir.r2]].p;
 								pc++;
 							}
 							break;
 
 						case STD: // [A] ← Rs
-							if (legal(ir.p)) {
+							if (legal(ir.p, framesAlocados)) {
 								m[ir.p].opc = Opcode.DATA;
 								m[ir.p].p = reg[ir.r1];
 								pc++;
 							}
-							;
 							break;
 
 						case STX: // [Rd] ←Rs
-							if (legal(reg[ir.r1])) {
+							if (legal(reg[ir.r1], framesAlocados)) {
 								m[reg[ir.r1]].opc = Opcode.DATA;
 								m[reg[ir.r1]].p = reg[ir.r2];
 								pc++;
 							}
-							;
 							break;
 
 						case MOVE: // RD <- RS
@@ -449,12 +464,12 @@ public class Sistema {
 		}
 	}
 
-	private void clearMemoria(Word[] p, Word[] m,  ArrayList<Integer> framesAlocados) {
+	private void clearMemoria(Word[] p, Word[] m, ArrayList<Integer> framesAlocados) {
 		for (int i = 0; i < p.length; i++) {
-			m[tradutorEnderecoDesalocar(i, framesAlocados)].opc = Opcode.___;
-			m[tradutorEnderecoDesalocar(i, framesAlocados)].r1 = -1;
-			m[tradutorEnderecoDesalocar(i, framesAlocados)].r2 = -1;
-			m[tradutorEnderecoDesalocar(i, framesAlocados)].p = -1;
+			m[tradutorEndereco(i, framesAlocados)].opc = Opcode.___;
+			m[tradutorEndereco(i, framesAlocados)].r1 = -1;
+			m[tradutorEndereco(i, framesAlocados)].r2 = -1;
+			m[tradutorEndereco(i, framesAlocados)].p = -1;
 		}
 	}
 
@@ -473,7 +488,7 @@ public class Sistema {
 		return inicioFrame + offset;
 	}
 
-	public int tradutorEnderecoDesalocar(int posicaoLogica, ArrayList<Integer> framesAlocados) {
+	public int tradutorEndereco(int posicaoLogica, ArrayList<Integer> framesAlocados) {
 
 		int emQPaginaEstou = posicaoLogica / vm.tamPag;
 
@@ -494,38 +509,12 @@ public class Sistema {
 		clearMemoria(p, vm.m, framesAlocados);
 	}
 
-	private void loadAndExec(Word[] p) {
-		System.out.println(" ");
-		System.out.println("Tamanho do Processo: " + p.length);
-		boolean podeAlocar = vm.gm.aloca(p.length);
-		System.out.println("Consegue alocar? " + podeAlocar);
-		System.out.println("");
-		int[] tabelaPaginas = vm.gm.tabelaPaginas;
-		System.out.println("-------------Tabela de Páginas--------------");
-		for (int i = 0; i < tabelaPaginas.length; i++) {
-			int pagina = tabelaPaginas[i];
-			if (pagina != -1) {
-				System.out.println(" Página: " + pagina + " Frame: " + i + " Início: "
-						+ (i * vm.gm.tamPag)
-						+ " Fim: " + (((i * vm.gm.tamPag) - 1) + vm.gm.tamPag));
-			}
-		}
-		System.out.println("--------------------------------------------");
+	// private void exec(Word[] p) {
+	// vm.cpu.setContext(0, vm.tamMem - 1, 0); // seta estado da cpu ]
+	// System.out.println("---------------------------------- inicia execucao ");
+	// vm.cpu.run(); // cpu roda programa ate parar
 
-		if (podeAlocar) {
-			loadProgram(p); // carga do programa na memoria
-		}
-
-		System.out.println("---------------------------------- programa carregado na memoria");
-		vm.mem.dump(0, vm.tamMem); // dump da memoria nestas posicoes
-		vm.cpu.setContext(0, vm.tamMem - 1, 0); // seta estado da cpu ]
-		System.out.println("---------------------------------- inicia execucao ");
-		vm.cpu.run(); // cpu roda programa ate parar
-		// int[] teste = { 1, 2 };
-		// vm.gm.desaloca(teste);
-		// vm.mem.dump(0, p.length); // dump da memoria com resultado
-
-	}
+	// }
 
 	// -------------------------------------------------------------------------------------------------------
 	// ------------------- S I S T E M A
@@ -585,7 +574,10 @@ public class Sistema {
 			System.out.println("[1] - Carregar programa");
 			System.out.println("[2] - Desalocar programa");
 			System.out.println("[3] - Executar");
-			System.out.println("[4] - Sair");
+			System.out.println("[4] - Listar processos");
+			System.out.println("[5] - Conteúdo PCB");
+			System.out.println("[6] - Lista memória");
+			System.out.println("[7] - Sair");
 			System.out.println("----------------------------------");
 			op = scanner.nextInt();
 			scanner.nextLine();
@@ -655,25 +647,82 @@ public class Sistema {
 						menu();
 						break;
 					case 3:
-						System.out.println("Deseja executar os programas?");
-						System.out.println("[1] - Sim");
-						System.out.println("[2] - Não");
-						opc = scanner.nextInt();
-						scanner.nextLine();
-						switch (opc) {
-							case 1:
-								vm.cpu.run();
-							case 2:
-								menu();
-								break;
-							default:
-								System.out.println("Opção inválida.");
-								break;
+						System.out.println("Qual processo você deseja executar?");
+						if (gp.filaProcessos.size() == 0) {
+							System.out.println("Sem programas para executar.");
+							menu();
+							break;
 						}
-						System.out.println("Executando programas...");
-						vm.cpu.run();
+						for (int i = 0; i < gp.filaProcessos.size(); i++) {
+							System.out.println(
+									"[" + gp.filaProcessos.get(i).id + "] - " + "Frames alocados: "
+											+ gp.filaProcessos.get(i).framesAlocados);
+						}
+						opc = scanner.nextInt();
+						gp.setRunning(opc);
+						scanner.nextLine();
+						System.out.println("Ponteiro running: " + gp.running);
+						for (int i = 0; i < gp.filaProcessos.size(); i++) {
+							if (gp.filaProcessos.get(i).id == opc) {
+								vm.cpu.setContext(0, vm.tamMem - 1, 0);
+								vm.cpu.run(gp.filaProcessos.get(i).framesAlocados);
+								gp.setRunning(-1);
+								if (!gp.desalocaProcesso(gp.filaProcessos.get(i).id)) {
+									System.out.println("Não foi possível desalocar o programa.");
+								} else {
+									System.out.println("Programa desalocado.");
+								}
+								break;
+							}
+						}
+						menu();
 						break;
 					case 4:
+						System.out.println("Lista de processos: ");
+						for (int i = 0; i < gp.filaProcessos.size(); i++) {
+							System.out.println(
+									"[" + gp.filaProcessos.get(i).id + "] - " + "Frames alocados: "
+											+ gp.filaProcessos.get(i).framesAlocados);
+
+						}
+						menu();
+						break;
+					case 5:
+						System.out.println("Qual o id do processo desejado?");
+						System.out.println("Lista de processos: ");
+						for (int i = 0; i < gp.filaProcessos.size(); i++) {
+							System.out.println(
+									"[" + gp.filaProcessos.get(i).id + "] - " + "Frames alocados: "
+											+ gp.filaProcessos.get(i).framesAlocados);
+
+						}
+						opc = scanner.nextInt();
+						scanner.nextLine();
+						for (int i = 0; i < gp.filaProcessos.size(); i++) {
+							if (gp.filaProcessos.get(i).id == opc) {
+								System.out.println("ID PROCESSO: " + opc);
+								System.out.println("ESTADO: " + gp.filaProcessos.get(i).estado);
+								System.out.println("PC: " + gp.filaProcessos.get(i).pc);
+								System.out.println("FRAMES ALOCADOS: " + gp.filaProcessos.get(i).framesAlocados);
+								break;
+							}
+						}
+						menu();
+						break;
+					case 6:
+						System.out.println("Diga a posição de início: ");
+						int ini = scanner.nextInt();
+						scanner.nextLine();
+						System.out.println("Diga a posição final: ");
+						int fim = scanner.nextInt();
+						scanner.nextLine();
+						if (ini < fim && ini >= 0 && fim >= 1 && ini < 1024 && fim <= 1024)
+							vm.mem.dump(ini, fim);
+						else
+							System.out.println("Posição inválida.");
+						menu();
+						break;
+					case 7:
 						System.out.println("Fim do programa!");
 						System.exit(0);
 						break;
@@ -995,7 +1044,6 @@ public class Sistema {
 
 	public class PCB {
 		int id;
-		int particao;
 		String estado;
 		int pc;
 		ArrayList<Integer> framesAlocados;
@@ -1012,7 +1060,8 @@ public class Sistema {
 	}
 
 	public class GP {
-		public ArrayList<PCB> filaProcessos;
+		public int running;
+		public List<PCB> filaProcessos;
 
 		public int registro = 0;
 
@@ -1051,6 +1100,10 @@ public class Sistema {
 			}
 			System.out.println("Não conseguiu alocar");
 			return false;
+		}
+
+		public void setRunning(int run) {
+			running = run;
 		}
 
 		public boolean desalocaProcesso(int id_processo) {
