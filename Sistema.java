@@ -571,12 +571,12 @@ public class Sistema {
 		public void menu() {
 			System.out.println("----------------------------------");
 			System.out.println("Comandos disponíveis:");
-			System.out.println("load - Carregar programa");
-			System.out.println("unload - Desalocar programa");
-			System.out.println("run - Executar programa");
-			System.out.println("list - Listar processos");
-			System.out.println("pcb - Exibir conteúdo PCB");
-			System.out.println("memory - Listar memória");
+			System.out.println("new - Carregar programa");
+			System.out.println("rm - Desalocar programa");
+			System.out.println("executa - Executar programa");
+			System.out.println("dumpM - Listar processos");
+			System.out.println("dump - Exibir conteúdo PCB");
+			System.out.println("ps - Listar memória");
 			System.out.println("exit - Sair");
 			System.out.println("----------------------------------");
 			System.out.print("Digite um comando: ");
@@ -585,7 +585,7 @@ public class Sistema {
 			String command = parts[0].toLowerCase();
 			while (true) {
 				switch (command) {
-					case "load":
+					case "new":
 						String op;
 						System.out.println("Qual programa você deseja carregar?");
 						System.out.println("fat - Fatorial");
@@ -631,7 +631,7 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case "unload":
+					case "rm":
 						int opc;
 						System.out.println("Qual programa você deseja desalocar? (id)");
 						for (int i = 0; i < gp.filaProcessos.size(); i++) {
@@ -648,7 +648,7 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case "run":
+					case "executa":
 						System.out.println("Qual processo você deseja executar?");
 						if (gp.filaProcessos.isEmpty()) {
 							System.out.println("Sem programas para executar.");
@@ -669,17 +669,17 @@ public class Sistema {
 								vm.cpu.setContext(0, vm.tamMem - 1, 0);
 								vm.cpu.run(gp.filaProcessos.get(i).framesAlocados);
 								gp.setRunning(-1);
-								if (!gp.desalocaProcesso(gp.filaProcessos.get(i).id)) {
-									System.out.println("Não foi possível desalocar o programa.");
-								} else {
-									System.out.println("Programa desalocado.");
-								}
+								// if (!gp.desalocaProcesso(gp.filaProcessos.get(i).id)) {
+								// System.out.println("Não foi possível desalocar o programa.");
+								// } else {
+								// System.out.println("Programa desalocado.");
+								// }
 								break;
 							}
 						}
 						menu();
 						break;
-					case "list":
+					case "ps":
 						System.out.println("Lista de processos: ");
 						if (gp.filaProcessos.isEmpty()) {
 							System.out.println("Sem programas carregados.");
@@ -694,7 +694,7 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case "pcb":
+					case "dump":
 						System.out.println("Qual o id do processo desejado?");
 						System.out.println("Lista de processos: ");
 
@@ -717,7 +717,7 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case "memory":
+					case "dumpM":
 						System.out.println("Diga a posição de início: ");
 						int ini = scanner.nextInt();
 						scanner.nextLine();
