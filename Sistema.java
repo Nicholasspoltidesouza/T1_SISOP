@@ -154,7 +154,8 @@ public class Sistema {
 				// --------------------------------------------------------------------------------------------------
 				// FETCH
 				if (legal(pc)) { // pc valido
-					ir = m[tradutorEndereco(pc)]; // <<<<<<<<<<<< busca posicao da memoria apontada por pc, guarda em ir
+					ir = m[tradutorEnderecoCriar(pc)]; // <<<<<<<<<<<< busca posicao da memoria apontada por pc, guarda
+														// em ir
 					if (debug) {
 						System.out.print("                               pc: " + pc + "       exec: ");
 						mem.dump(ir);
@@ -441,14 +442,23 @@ public class Sistema {
 	// ------------------ load é invocado a partir de requisição do usuário
 	private void loadProgram(Word[] p, Word[] m) {
 		for (int i = 0; i < p.length; i++) {
-			m[tradutorEndereco(i)].opc = p[i].opc;
-			m[tradutorEndereco(i)].r1 = p[i].r1;
-			m[tradutorEndereco(i)].r2 = p[i].r2;
-			m[tradutorEndereco(i)].p = p[i].p;
+			m[tradutorEnderecoCriar(i)].opc = p[i].opc;
+			m[tradutorEnderecoCriar(i)].r1 = p[i].r1;
+			m[tradutorEnderecoCriar(i)].r2 = p[i].r2;
+			m[tradutorEnderecoCriar(i)].p = p[i].p;
 		}
 	}
 
-	public int tradutorEndereco(int posicaoLogica) {
+	private void clearMemoria(Word[] p, Word[] m,  ArrayList<Integer> framesAlocados) {
+		for (int i = 0; i < p.length; i++) {
+			m[tradutorEnderecoDesalocar(i, framesAlocados)].opc = Opcode.___;
+			m[tradutorEnderecoDesalocar(i, framesAlocados)].r1 = -1;
+			m[tradutorEnderecoDesalocar(i, framesAlocados)].r2 = -1;
+			m[tradutorEnderecoDesalocar(i, framesAlocados)].p = -1;
+		}
+	}
+
+	public int tradutorEnderecoCriar(int posicaoLogica) {
 
 		ArrayList<Integer> framesAlocados = vm.gm.framesAlocados;
 
@@ -463,8 +473,25 @@ public class Sistema {
 		return inicioFrame + offset;
 	}
 
-	private void loadProgram(Word[] p, ArrayList framesAlocados) {
+	public int tradutorEnderecoDesalocar(int posicaoLogica, ArrayList<Integer> framesAlocados) {
+
+		int emQPaginaEstou = posicaoLogica / vm.tamPag;
+
+		int offset = posicaoLogica % vm.tamPag;
+
+		int emQFrameEstou = framesAlocados.get(emQPaginaEstou).intValue();
+
+		int inicioFrame = emQFrameEstou * vm.gm.tamPag;
+
+		return inicioFrame + offset;
+	}
+
+	private void loadProgram(Word[] p) {
 		loadProgram(p, vm.m);
+	}
+
+	private void clearMemoria(Word[] p, ArrayList<Integer> framesAlocados) {
+		clearMemoria(p, vm.m, framesAlocados);
 	}
 
 	private void loadAndExec(Word[] p) {
@@ -486,7 +513,7 @@ public class Sistema {
 		System.out.println("--------------------------------------------");
 
 		if (podeAlocar) {
-			loadProgram(p, vm.gm.framesAlocados); // carga do programa na memoria
+			loadProgram(p); // carga do programa na memoria
 		}
 
 		System.out.println("---------------------------------- programa carregado na memoria");
@@ -494,9 +521,9 @@ public class Sistema {
 		vm.cpu.setContext(0, vm.tamMem - 1, 0); // seta estado da cpu ]
 		System.out.println("---------------------------------- inicia execucao ");
 		vm.cpu.run(); // cpu roda programa ate parar
-		int[] teste = { 1, 2 };
+		// int[] teste = { 1, 2 };
 		// vm.gm.desaloca(teste);
-		vm.mem.dump(0, p.length); // dump da memoria com resultado
+		// vm.mem.dump(0, p.length); // dump da memoria com resultado
 
 	}
 
@@ -538,46 +565,125 @@ public class Sistema {
 	}
 
 	public void inicializar() {
-		Scanner scanner = new Scanner(System.in);
 		GP gp = new GP();
-
-		gp.criaProcesso(progs.fatorial);
-		gp.criaProcesso(progs.progMinimo);
-		gp.criaProcesso(progs.fatorialTRAP);
-		gp.desalocaProcesso(2);
-		gp.criaProcesso(progs.progMinimo);
+		Menu m = new Menu();
+		m.menu();
 	}
 
-	// public class Menu {
+	public class Menu {
+		public GP gp;
+		Scanner scanner;
 
-	// public Menu() {
-	// Scanner scanner = new Scanner(System.in);
-	// int op;
-	// System.out.println("----------------------------------");
-	// System.out.println("[1] - Carregar programa");
-	// System.out.println("[2] - Desalocar programa");
-	// System.out.println("[3] - Executar");
-	// System.out.println("[4] - Sair");
-	// System.out.println("----------------------------------");
-	// op = scanner.nextInt();
-	// scanner.nextLine();
-	// while (op != 4) {
-	// switch (op) {
-	// case 1:
-	// break;
-	// case 2:
-	// break;
-	// case 3:
-	// break;
-	// case 4:
-	// System.exit(0);
-	// break;
-	// default:
-	// break;
-	// }
-	// }
-	// }
-	// }
+		public Menu() {
+			gp = new GP();
+			scanner = new Scanner(System.in);
+		}
+
+		public void menu() {
+			int op;
+			System.out.println("----------------------------------");
+			System.out.println("[1] - Carregar programa");
+			System.out.println("[2] - Desalocar programa");
+			System.out.println("[3] - Executar");
+			System.out.println("[4] - Sair");
+			System.out.println("----------------------------------");
+			op = scanner.nextInt();
+			scanner.nextLine();
+			while (true) {
+				switch (op) {
+					case 1:
+						int opc;
+						System.out.println("Qual programa você deseja carregar?");
+						System.out.println("[1] - Fatorial");
+						System.out.println("[2] - FatorialTRAP");
+						System.out.println("[3] - Minimo");
+						System.out.println("[4] - Fibonacci10");
+						System.out.println("[5] - FibonacciTRAP");
+						System.out.println("[6] - PC");
+						System.out.println("[7] - PB");
+						opc = scanner.nextInt();
+						scanner.nextLine();
+						switch (opc) {
+							case 1:
+								gp.criaProcesso(progs.fatorial);
+								System.out.println("Programa carregado.");
+								break;
+							case 2:
+								gp.criaProcesso(progs.fatorialTRAP);
+								System.out.println("Programa carregado.");
+								break;
+							case 3:
+								gp.criaProcesso(progs.progMinimo);
+								System.out.println("Programa carregado.");
+								break;
+							case 4:
+								gp.criaProcesso(progs.fibonacci10);
+								System.out.println("Programa carregado.");
+								break;
+							case 5:
+								gp.criaProcesso(progs.fibonacciTRAP);
+								System.out.println("Programa carregado.");
+								break;
+							case 6:
+								gp.criaProcesso(progs.PC);
+								System.out.println("Programa carregado.");
+								break;
+							case 7:
+								gp.criaProcesso(progs.PB);
+								System.out.println("Programa carregado.");
+								break;
+							default:
+								System.out.println("Opção inválida.");
+								break;
+						}
+						menu();
+						break;
+					case 2:
+						System.out.println("Qual programa você deseja desalocar? (id)");
+						for (int i = 0; i < gp.filaProcessos.size(); i++) {
+							System.out.println(
+									"[" + gp.filaProcessos.get(i).id + "] - " + "Frames alocados: "
+											+ gp.filaProcessos.get(i).framesAlocados);
+						}
+						opc = scanner.nextInt();
+						scanner.nextLine();
+						if (!gp.desalocaProcesso(opc)) {
+							System.out.println("Não foi possível desalocar o programa.");
+						} else {
+							System.out.println("Programa desalocado.");
+						}
+						menu();
+						break;
+					case 3:
+						System.out.println("Deseja executar os programas?");
+						System.out.println("[1] - Sim");
+						System.out.println("[2] - Não");
+						opc = scanner.nextInt();
+						scanner.nextLine();
+						switch (opc) {
+							case 1:
+								vm.cpu.run();
+							case 2:
+								menu();
+								break;
+							default:
+								System.out.println("Opção inválida.");
+								break;
+						}
+						System.out.println("Executando programas...");
+						vm.cpu.run();
+						break;
+					case 4:
+						System.out.println("Fim do programa!");
+						System.exit(0);
+						break;
+					default:
+						System.out.println("Opção inválida.");
+						break;
+				}
+			}
+		}
+	}
 
 	// -------------------------------------------------------------------------------------------------------
 	// -------------------------------------------------------------------------------------------------------
@@ -893,12 +999,14 @@ public class Sistema {
 		String estado;
 		int pc;
 		ArrayList<Integer> framesAlocados;
+		Word[] programa;
 
-		public PCB(int id, String estado, int pc, ArrayList<Integer> framesAlocados) {
+		public PCB(int id, String estado, int pc, ArrayList<Integer> framesAlocados, Word[] programa) {
 			this.id = id;
 			this.estado = estado;
 			this.pc = pc;
 			this.framesAlocados = framesAlocados;
+			this.programa = programa;
 		}
 
 	}
@@ -917,7 +1025,7 @@ public class Sistema {
 				registro++;
 				System.out.println("Conseguiu alocar.");
 				ArrayList<Integer> paginasAlocadas = vm.gm.framesAlocados;
-				PCB proc = new PCB(registro, "PRONTO", 0, paginasAlocadas);
+				PCB proc = new PCB(registro, "PRONTO", 0, paginasAlocadas, programa);
 				filaProcessos.add(proc);
 
 				System.out.println("");
@@ -934,7 +1042,7 @@ public class Sistema {
 				}
 				System.out.println("--------------------------------------------");
 
-				loadProgram(programa, vm.gm.framesAlocados); // carga do programa na memoria
+				loadProgram(programa); // carga do programa na memoria
 				System.out.println("---------------------------------- programa carregado na memoria");
 				vm.mem.dump(0, vm.tamMem); // dump da memoria nestas posicoes
 
@@ -945,21 +1053,19 @@ public class Sistema {
 			return false;
 		}
 
-		public void desalocaProcesso(int id_processo) {
+		public boolean desalocaProcesso(int id_processo) {
 			PCB pcb = null;
 			for (int i = 0; i < filaProcessos.size(); i++) {
 				if (filaProcessos.get(i).id == id_processo) {
 					pcb = filaProcessos.get(i);
 					filaProcessos.remove(i);
-					break;
+					clearMemoria(pcb.programa, pcb.framesAlocados);
+					vm.gm.desaloca(pcb.framesAlocados);
+					vm.mem.dump(0, vm.tamMem);
+					return true;
 				}
 			}
-			if (pcb == null) {
-				System.out.println("Nenhum processo com esse id foi encontrado.");
-			}
-
-			vm.gm.desaloca(pcb.framesAlocados);
-
+			return false;
 		}
 	}
 }
