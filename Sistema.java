@@ -679,17 +679,23 @@ public class Sistema {
 						break;
 					case 4:
 						System.out.println("Lista de processos: ");
+						if (gp.filaProcessos.isEmpty()) {
+							System.out.println("Sem programas carregados.");
+							menu();
+							break;
+						}
 						for (int i = 0; i < gp.filaProcessos.size(); i++) {
-							System.out.println(
-									"[" + gp.filaProcessos.get(i).id + "] - " + "Frames alocados: "
-											+ gp.filaProcessos.get(i).framesAlocados);
-
+							System.out.println("ID PROCESSO: " + gp.filaProcessos.get(i).id);
+							System.out.println("ESTADO: " + gp.filaProcessos.get(i).estado);
+							System.out.println("PC: " + gp.filaProcessos.get(i).pc);
+							System.out.println("FRAMES ALOCADOS: " + gp.filaProcessos.get(i).framesAlocados);
 						}
 						menu();
 						break;
 					case 5:
 						System.out.println("Qual o id do processo desejado?");
 						System.out.println("Lista de processos: ");
+
 						for (int i = 0; i < gp.filaProcessos.size(); i++) {
 							System.out.println(
 									"[" + gp.filaProcessos.get(i).id + "] - " + "Frames alocados: "
