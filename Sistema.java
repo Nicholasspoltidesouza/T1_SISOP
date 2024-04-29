@@ -465,11 +465,16 @@ public class Sistema {
 	}
 
 	private void clearMemoria(Word[] p, Word[] m, ArrayList<Integer> framesAlocados) {
-		for (int i = 0; i < p.length; i++) {
-			m[tradutorEndereco(i, framesAlocados)].opc = Opcode.___;
-			m[tradutorEndereco(i, framesAlocados)].r1 = -1;
-			m[tradutorEndereco(i, framesAlocados)].r2 = -1;
-			m[tradutorEndereco(i, framesAlocados)].p = -1;
+		for (int i = 0; i < framesAlocados.size(); i++) {
+			int frame = framesAlocados.get(i);
+			int inicioFrame = frame * vm.gm.tamPag;
+			int finalFrame = (frame * vm.gm.tamPag) + vm.gm.tamPag;
+			for (int k = inicioFrame; k < finalFrame; k++) {
+				m[k].opc = Opcode.___;
+				m[k].r1 = -1;
+				m[k].r2 = -1;
+				m[k].p = -1;
+			}
 		}
 	}
 
@@ -661,19 +666,19 @@ public class Sistema {
 											+ gp.filaProcessos.get(i).framesAlocados);
 						}
 						opc = scanner.nextInt();
-						gp.setRunning(opc);
 						scanner.nextLine();
 						System.out.println("Ponteiro running: " + gp.running);
 						for (int i = 0; i < gp.filaProcessos.size(); i++) {
 							if (gp.filaProcessos.get(i).id == opc) {
+								gp.setRunning(opc);
 								vm.cpu.setContext(0, vm.tamMem - 1, 0);
 								vm.cpu.run(gp.filaProcessos.get(i).framesAlocados);
 								gp.setRunning(-1);
-								// if (!gp.desalocaProcesso(gp.filaProcessos.get(i).id)) {
-								// System.out.println("Não foi possível desalocar o programa.");
-								// } else {
-								// System.out.println("Programa desalocado.");
-								// }
+								if (!gp.desalocaProcesso(gp.filaProcessos.get(i).id)) {
+									System.out.println("Não foi possível desalocar o programa.");
+								} else {
+									System.out.println("Programa desalocado.");
+								}
 								break;
 							}
 						}
@@ -690,7 +695,7 @@ public class Sistema {
 							System.out.println("ID PROCESSO: " + gp.filaProcessos.get(i).id);
 							System.out.println("ESTADO: " + gp.filaProcessos.get(i).estado);
 							System.out.println("PC: " + gp.filaProcessos.get(i).pc);
-							System.out.println("FRAMES ALOCADOS: " + gp.filaProcessos.get(i).framesAlocados);
+							System.out.println("FRAMES ALOCADOS: " + gp.filaProcessos.get(i).framesAlocados + "\n");
 						}
 						menu();
 						break;
@@ -717,7 +722,7 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case "dumpM":
+					case "dumpm":
 						System.out.println("Diga a posição de início: ");
 						int ini = scanner.nextInt();
 						scanner.nextLine();
