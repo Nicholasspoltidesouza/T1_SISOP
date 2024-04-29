@@ -667,10 +667,10 @@ public class Sistema {
 						}
 						opc = scanner.nextInt();
 						scanner.nextLine();
-						System.out.println("Ponteiro running: " + gp.running);
 						for (int i = 0; i < gp.filaProcessos.size(); i++) {
 							if (gp.filaProcessos.get(i).id == opc) {
 								gp.setRunning(opc);
+								System.out.println("Ponteiro running: " + gp.running);
 								vm.cpu.setContext(0, vm.tamMem - 1, 0);
 								vm.cpu.run(gp.filaProcessos.get(i).framesAlocados);
 								gp.setRunning(-1);
