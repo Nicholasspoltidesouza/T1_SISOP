@@ -133,10 +133,6 @@ public class Sistema {
 				int frame = framesAlocados.get(i);
 				int tamMaximo = (frame * vm.gm.tamPag) + vm.gm.tamPag - 1;
 				int tamMinimo = frame * vm.gm.tamPag;
-				// System.out.println("Frame" + frame);
-				// System.out.println("tamMaximo" + tamMaximo);
-				// System.out.println(e);
-				// System.out.println("tamMin" + tamMinimo);
 				if (e <= tamMaximo && e >= tamMinimo) {
 					return true;
 				}
@@ -167,8 +163,11 @@ public class Sistema {
 			while (true) { // ciclo de instrucoes. acaba cfe instrucao, veja cada caso.
 				// --------------------------------------------------------------------------------------------------
 				// FETCH
-				if (legal(pc, framesAlocados)) { // pc valido
-					ir = m[tradutorEndereco(pc, framesAlocados)]; // <<<<<<<<<<<< busca posicao da memoria
+
+				int pcTraduzido = tradutorEndereco(pc, framesAlocados);
+
+				if (legal(pcTraduzido, framesAlocados)) { // pc valido
+					ir = m[pcTraduzido]; // <<<<<<<<<<<< busca posicao da memoria
 																	// apontada
 					// por pc,
 					// guarda
@@ -189,30 +188,30 @@ public class Sistema {
 
 						case LDD: // Rd <- [A]
 							if (legal(ir.p, framesAlocados)) {
-								reg[ir.r1] = m[ir.p].p;
+								reg[ir.r1] = m[tradutorEndereco(ir.p, framesAlocados)].p;
 								pc++;
 							}
 							break;
 
 						case LDX: // RD <- [RS] // NOVA
 							if (legal(reg[ir.r2], framesAlocados)) {
-								reg[ir.r1] = m[reg[ir.r2]].p;
+								reg[ir.r1] = m[tradutorEndereco(reg[ir.r2], framesAlocados)].p;
 								pc++;
 							}
 							break;
 
 						case STD: // [A] ← Rs
 							if (legal(ir.p, framesAlocados)) {
-								m[ir.p].opc = Opcode.DATA;
-								m[ir.p].p = reg[ir.r1];
+								m[tradutorEndereco(ir.p, framesAlocados)].opc = Opcode.DATA;
+								m[tradutorEndereco(ir.p, framesAlocados)].p = reg[ir.r1];
 								pc++;
 							}
 							break;
 
 						case STX: // [Rd] ←Rs
 							if (legal(reg[ir.r1], framesAlocados)) {
-								m[reg[ir.r1]].opc = Opcode.DATA;
-								m[reg[ir.r1]].p = reg[ir.r2];
+								m[tradutorEndereco(reg[ir.r1], framesAlocados)].opc = Opcode.DATA;
+								m[tradutorEndereco(reg[ir.r1], framesAlocados)].p = reg[ir.r2];
 								pc++;
 							}
 							break;
@@ -307,12 +306,12 @@ public class Sistema {
 							break;
 
 						case JMPIM: // PC <- [A]
-							pc = m[ir.p].p;
+							pc = m[tradutorEndereco(ir.p, framesAlocados)].p;
 							break;
 
 						case JMPIGM: // If RC > 0 then PC <- [A] else PC++
 							if (reg[ir.r2] > 0) {
-								pc = m[ir.p].p;
+								pc = m[tradutorEndereco(ir.p, framesAlocados)].p;
 							} else {
 								pc++;
 							}
@@ -320,7 +319,7 @@ public class Sistema {
 
 						case JMPILM: // If RC < 0 then PC <- k else PC++
 							if (reg[ir.r2] < 0) {
-								pc = m[ir.p].p;
+								pc = m[tradutorEndereco(ir.p, framesAlocados)].p;
 							} else {
 								pc++;
 							}
@@ -328,7 +327,7 @@ public class Sistema {
 
 						case JMPIEM: // If RC = 0 then PC <- k else PC++
 							if (reg[ir.r2] == 0) {
-								pc = m[ir.p].p;
+								pc = m[tradutorEndereco(ir.p, framesAlocados)].p;
 							} else {
 								pc++;
 							}
@@ -503,7 +502,7 @@ public class Sistema {
 
 		int inicioFrame = emQFrameEstou * vm.gm.tamPag;
 
-		return inicioFrame + offset;
+		return (inicioFrame + offset);
 	}
 
 	private void loadProgram(Word[] p) {
