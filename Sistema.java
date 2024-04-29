@@ -569,58 +569,59 @@ public class Sistema {
 		}
 
 		public void menu() {
-			int op;
 			System.out.println("----------------------------------");
-			System.out.println("[1] - Carregar programa");
-			System.out.println("[2] - Desalocar programa");
-			System.out.println("[3] - Executar");
-			System.out.println("[4] - Listar processos");
-			System.out.println("[5] - Conteúdo PCB");
-			System.out.println("[6] - Lista memória");
-			System.out.println("[7] - Sair");
+			System.out.println("Comandos disponíveis:");
+			System.out.println("load - Carregar programa");
+			System.out.println("unload - Desalocar programa");
+			System.out.println("run - Executar programa");
+			System.out.println("list - Listar processos");
+			System.out.println("pcb - Exibir conteúdo PCB");
+			System.out.println("memory - Listar memória");
+			System.out.println("exit - Sair");
 			System.out.println("----------------------------------");
-			op = scanner.nextInt();
-			scanner.nextLine();
+			System.out.print("Digite um comando: ");
+			String input = scanner.nextLine().trim();
+			String[] parts = input.split("\\s+");
+			String command = parts[0].toLowerCase();
 			while (true) {
-				switch (op) {
-					case 1:
-						int opc;
+				switch (command) {
+					case "load":
+						String op;
 						System.out.println("Qual programa você deseja carregar?");
-						System.out.println("[1] - Fatorial");
-						System.out.println("[2] - FatorialTRAP");
-						System.out.println("[3] - Minimo");
-						System.out.println("[4] - Fibonacci10");
-						System.out.println("[5] - FibonacciTRAP");
-						System.out.println("[6] - PC");
-						System.out.println("[7] - PB");
-						opc = scanner.nextInt();
-						scanner.nextLine();
-						switch (opc) {
-							case 1:
+						System.out.println("fat - Fatorial");
+						System.out.println("fattrap - FatorialTRAP");
+						System.out.println("min - Minimo");
+						System.out.println("fib10 - Fibonacci10");
+						System.out.println("fibtrap - FibonacciTRAP");
+						System.out.println("pc - PC");
+						System.out.println("pb - PB");
+						op = scanner.nextLine();
+						switch (op) {
+							case "fat":
 								gp.criaProcesso(progs.fatorial);
 								System.out.println("Programa carregado.");
 								break;
-							case 2:
+							case "fattrap":
 								gp.criaProcesso(progs.fatorialTRAP);
 								System.out.println("Programa carregado.");
 								break;
-							case 3:
+							case "min":
 								gp.criaProcesso(progs.progMinimo);
 								System.out.println("Programa carregado.");
 								break;
-							case 4:
+							case "fib10":
 								gp.criaProcesso(progs.fibonacci10);
 								System.out.println("Programa carregado.");
 								break;
-							case 5:
+							case "fibtrap":
 								gp.criaProcesso(progs.fibonacciTRAP);
 								System.out.println("Programa carregado.");
 								break;
-							case 6:
+							case "pc":
 								gp.criaProcesso(progs.PC);
 								System.out.println("Programa carregado.");
 								break;
-							case 7:
+							case "pb":
 								gp.criaProcesso(progs.PB);
 								System.out.println("Programa carregado.");
 								break;
@@ -630,7 +631,8 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case 2:
+					case "unload":
+						int opc;
 						System.out.println("Qual programa você deseja desalocar? (id)");
 						for (int i = 0; i < gp.filaProcessos.size(); i++) {
 							System.out.println(
@@ -646,9 +648,9 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case 3:
+					case "run":
 						System.out.println("Qual processo você deseja executar?");
-						if (gp.filaProcessos.size() == 0) {
+						if (gp.filaProcessos.isEmpty()) {
 							System.out.println("Sem programas para executar.");
 							menu();
 							break;
@@ -677,7 +679,7 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case 4:
+					case "list":
 						System.out.println("Lista de processos: ");
 						if (gp.filaProcessos.isEmpty()) {
 							System.out.println("Sem programas carregados.");
@@ -692,7 +694,7 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case 5:
+					case "pcb":
 						System.out.println("Qual o id do processo desejado?");
 						System.out.println("Lista de processos: ");
 
@@ -715,7 +717,7 @@ public class Sistema {
 						}
 						menu();
 						break;
-					case 6:
+					case "memory":
 						System.out.println("Diga a posição de início: ");
 						int ini = scanner.nextInt();
 						scanner.nextLine();
@@ -728,12 +730,13 @@ public class Sistema {
 							System.out.println("Posição inválida.");
 						menu();
 						break;
-					case 7:
+					case "exit":
 						System.out.println("Fim do programa!");
 						System.exit(0);
 						break;
 					default:
 						System.out.println("Opção inválida.");
+						menu();
 						break;
 				}
 			}
